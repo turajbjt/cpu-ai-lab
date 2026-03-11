@@ -1,0 +1,110 @@
+📁 GitLab Repo Structure: cpu-ai-lab
+
+cpu-ai-lab/
+├── README.md                     # Full documentation
+├── .gitignore                    # Ignores volumes, logs, caches
+├── start_lab.sh                  # Zero-touch startup script
+├── requirements.txt              # Python dependencies
+├── run_agents.py                 # Multi-agent Flask API
+├── docker-compose.yml            # Core services (Ollama, Qdrant, n8n, Flowise, Open WebUI)
+├── docker-compose.override.yml   # Agents + Web UI
+├── agents/                       # All Python agents
+│   ├── __init__.py
+│   ├── coordinator.py
+│   ├── planner_agent.py
+│   ├── researcher_agent.py
+│   ├── coder_agent.py
+│   ├── executor_agent.py
+│   ├── critic_agent.py
+│   ├── improver_agent.py
+│   ├── memory_agent.py
+│   ├── tools.py
+│   └── rag_memory.py
+├── webui/                        # Browser interface
+│   ├── index.html
+│   ├── script.js
+│   └── Dockerfile
+├── learning/                     # Persistent self-improvement storage (ignored in Git)
+│   └── lessons.json
+└── ingestion/                    # Optional: document ingestion for vector memory
+    └── ingest_docs.py
+
+
+🔹 File Contents Overview
+
+1️⃣ start_lab.sh
+
+    Pulls Ollama image and CPU models.
+
+    Creates learning/lessons.json.
+
+    Builds and starts all Docker containers.
+
+2️⃣ requirements.txt
+
+    Includes Flask, langchain, langchain-ollama, Ollama client, Qdrant client, and other Python dependencies.
+
+3️⃣ run_agents.py
+
+    Starts Flask multi-agent API (/api/goal).
+
+4️⃣ docker-compose.yml
+
+    Core services: Ollama, Qdrant, n8n, Flowise, Open WebUI.
+
+5️⃣ docker-compose.override.yml
+
+    Multi-agent API container (agents) + Web UI.
+
+    Only mounts directories (agents/, learning/) to avoid Docker mount errors.
+
+6️⃣ agents/
+
+    Contains all agent Python code: Planner, Researcher, Coder, Executor, Critic, Improver, Memory, and helper tools (tools.py, rag_memory.py).
+
+7️⃣ webui/
+
+    Simple browser UI with index.html, script.js, and Dockerfile.
+
+8️⃣ learning/
+
+    Stores lessons.json (ignored by Git) for persistent learning.
+
+9️⃣ ingestion/
+
+    Optional document ingestion scripts for vector memory.
+
+🔹 Steps to Run (Zero-Touch)
+
+    Clone the repo:
+
+git clone <your-gitlab-repo-url> cpu-ai-lab
+cd cpu-ai-lab
+
+    Make the startup script executable:
+
+chmod +x start_lab.sh
+
+    Start the lab:
+
+./start_lab.sh
+
+    Access services:
+
+Service	URL
+Multi-Agent API	http://localhost:5000/api/goal
+Browser UI	http://localhost:3005
+Ollama API	http://localhost:11434
+Qdrant Dashboard	http://localhost:6333/dashboard
+Open WebUI	http://localhost:3000
+Flowise	http://localhost:3001
+n8n	http://localhost:5678
+
+🔹 GitLab Best Practices
+
+    .gitignore prevents committing Docker volumes, logs, Python caches, and learning/lessons.json.
+
+    Only source code, Dockerfiles, scripts, and configs are tracked.
+
+    Users can clone and run immediately on a CPU machine.
+

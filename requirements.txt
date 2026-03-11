@@ -1,0 +1,22 @@
+# Web/API
+Flask>=2.3.2
+requests>=2.31.0
+
+# Ollama + LLMs
+langchain>=0.3.0
+langchain-ollama>=0.1.0
+ollama>=0.1.0
+
+# Vector/Memory
+qdrant-client>=1.2.0
+numpy>=1.26.0
+
+# Data handling
+pandas>=2.1.0
+
+# Optional tools for agents
+python-dotenv>=1.0.0
+tiktoken>=0.4.0
+
+# Async / concurrency if needed
+aiohttp>=3.9.0

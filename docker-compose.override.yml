@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  agents:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+    container_name: multi_agent_lab
+    restart: unless-stopped
+    ports:
+      - "5000:5000"   # Multi-agent API
+    depends_on:
+      - ollama
+      - qdrant
+    # Only mount directories (no file mounts)
+    volumes:
+      - ./agents:/app/agents
+      - ./learning:/app/learning
+
+  webui:
+    build:
+      context: ./webui
+    container_name: multi_agent_webui
+    restart: unless-stopped
+    ports:
+      - "3005:80"
