@@ -22,17 +22,25 @@ For CLI flag reference, see [Flags](FLAGS.md)
 
 # Super quick reset and start
 
+Clone the repository
+
+```bash
+git clone https://github.com/turajbjt/cpu-ai-lab.git
+cd cpu-ai-lab
+```
+
+Start CPU AI Lab (super quick one-liner)
+
 ```bash
 ./lab up --no-logs --fast-start && echo -e "\n✅ CPU AI Lab environment is up and running!"
 ```
 
 🔹 What this does:
 
-* Removes old containers, volumes, and network automatically
-* Builds/pulls all images (Ollama, Flowise, OpenWebUI, Agents, Qdrant, N8N)
-* Starts all containers
-* Skips logs for a clean, fast startup
-* Skips health checks for maximum speed
+* Removes old containers, volumes, and network
+* Pulls/builds Docker images (Ollama, Flowise, OpenWebUI, Agents, Qdrant, N8N)
+* Starts all containers in the correct order
+* Skips logs and health checks for maximum speed
 
 **Notes:**
 

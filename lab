@@ -1,19 +1,18 @@
-#!/bin/bash
-# ./lab - CPU AI Lab release-ready startup script
+i#!/bin/bash
+# ./lab - CPU AI Lab robust startup script
 
-# --- Color codes ---
+# --- Colors ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 echo -e "${BLUE}🟢 Preparing CPU AI Lab environment...${NC}"
 
 # --- CLI flags ---
 NO_LOGS=false
 FAST_START=false
-
 for arg in "$@"; do
     case $arg in
         --no-logs) NO_LOGS=true ;;
@@ -28,8 +27,6 @@ safe_remove_container() {
     if docker ps -a --format '{{.Names}}' | grep -q "^${name}$"; then
         echo -e "${YELLOW}🛠 Removing existing container: $name${NC}"
         docker rm -f "$name"
-    else
-        echo -e "${GREEN}✅ No existing container named $name${NC}"
     fi
 }
 
@@ -38,8 +35,6 @@ safe_remove_volume() {
     if docker volume ls --format '{{.Name}}' | grep -q "^${name}$"; then
         echo -e "${YELLOW}🛠 Removing existing volume: $name${NC}"
         docker volume rm "$name"
-    else
-        echo -e "${GREEN}✅ No existing volume named $name${NC}"
     fi
 }
 
@@ -48,8 +43,6 @@ safe_remove_network() {
     if docker network ls --format '{{.Name}}' | grep -q "^${name}$"; then
         echo -e "${YELLOW}🛠 Removing existing network: $name${NC}"
         docker network rm "$name"
-    else
-        echo -e "${GREEN}✅ No existing network named $name${NC}"
     fi
 }
 
@@ -59,57 +52,44 @@ stream_container_logs() {
     docker logs -f "$name" 2>&1 | sed "s/^/[$name] /"
 }
 
-wait_for_http() {
+wait_for_service() {
     local name="$1"
     local url="$2"
     echo -e "${BLUE}⏳ Waiting for $name to respond at $url...${NC}"
-    until curl -s -o /dev/null "$url"; do
+    until curl -s -f "$url" >/dev/null 2>&1; do
         sleep 2
     done
-    echo -e "${GREEN}✅ $name is responding!${NC}"
+    echo -e "${GREEN}✅ $name is ready!${NC}"
 }
 
-wait_for_ollama() {
-    local host="localhost"
-    local port="11434"
-    echo -e "${BLUE}⏳ Waiting for Ollama model server on $host:$port...${NC}"
-    until curl -s "http://$host:$port/v1/models" >/dev/null 2>&1; do
+wait_for_ollama_models() {
+    local expected_models=("phi3" "mistral" "codellama" "nomic-embed-text")
+    echo -e "${BLUE}⏳ Waiting for Ollama models to be available...${NC}"
+    until curl -s http://localhost:11434/v1/models | grep -E "$(IFS='|'; echo "${expected_models[*]}")" >/dev/null; do
         sleep 2
     done
-    echo -e "${GREEN}✅ Ollama model server is ready!${NC}"
+    echo -e "${GREEN}✅ All Ollama models are ready!${NC}"
 }
 
-wait_for_qdrant() {
-    local host="localhost"
-    local port="6333"
-    echo -e "${BLUE}⏳ Waiting for Qdrant on $host:$port...${NC}"
-    until curl -s "http://$host:$port/collections" >/dev/null 2>&1; do
-        sleep 2
-    done
-    echo -e "${GREEN}✅ Qdrant is ready!${NC}"
-}
-
-# --- Cleanup previous resources ---
+# --- Cleanup ---
 echo -e "${BLUE}🔄 Cleaning previous containers, volumes, and network...${NC}"
-safe_remove_container "ollama"
-safe_remove_container "multi_agent_webui"
-safe_remove_container "n8n"
-safe_remove_container "qdrant"
-safe_remove_container "openwebui"
+for c in ollama bootstrap_models openwebui flowise qdrant n8n; do
+    safe_remove_container "$c"
+done
 
-safe_remove_volume "cpu-ai-lab_ollama"
-safe_remove_volume "cpu-ai-lab_n8n"
-safe_remove_volume "cpu-ai-lab_qdrant"
-safe_remove_volume "cpu-ai-lab_flowise"
-safe_remove_volume "cpu-ai-lab_openwebui"
+for v in ollama openwebui flowise qdrant n8n; do
+    safe_remove_volume "$v"
+done
 
 safe_remove_network "cpu-ai-lab_default"
 
-# --- Pull/build Docker images ---
+# --- Pull/build images ---
 echo -e "${BLUE}📦 Pulling/building Docker images...${NC}"
-docker pull flowiseai/flowise:latest
-docker build -t cpu-ai-lab-agents ./agents
-docker build -t cpu-ai-lab-webui ./webui
+docker pull ollama/ollama:latest
+docker pull ghcr.io/open-webui/open-webui:main
+docker pull flowiseai/flowise
+docker pull qdrant/qdrant
+docker pull n8nio/n8n
 
 # --- Start containers ---
 echo -e "${BLUE}🟢 Starting CPU AI Lab containers...${NC}"
@@ -117,25 +97,25 @@ docker-compose up -d --build
 
 # --- Optionally stream logs ---
 if [ "$NO_LOGS" = false ]; then
-    containers=("ollama" "multi_agent_webui" "n8n" "qdrant" "openwebui")
-    for c in "${containers[@]}"; do
+    for c in ollama bootstrap_models openwebui flowise qdrant n8n; do
         stream_container_logs "$c" &
     done
 fi
 
 # --- Health checks ---
 if [ "$FAST_START" = false ]; then
-    wait_for_http "OpenWebUI" "http://localhost:5000"
-    wait_for_http "Flowise" "http://localhost:3000"
-    wait_for_http "N8N" "http://localhost:5678"
-    wait_for_ollama
-    wait_for_qdrant
+    wait_for_service "Ollama" "http://localhost:11434/v1/models"
+    wait_for_ollama_models
+    wait_for_service "OpenWebUI" "http://localhost:3000"
+    wait_for_service "Flowise" "http://localhost:3001"
+    wait_for_service "N8N" "http://localhost:5678"
+    wait_for_service "Qdrant" "http://localhost:6333/collections"
     echo -e "${GREEN}🎉 CPU AI Lab is fully ready! All services are running and responsive.${NC}"
 else
     echo -e "${YELLOW}⚡ Fast start enabled, skipping health checks. Containers are running.${NC}"
 fi
 
-# --- Wait for background logs if any ---
+# --- Wait for logs if enabled ---
 if [ "$NO_LOGS" = false ]; then
     wait
 fi

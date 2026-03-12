@@ -1,4 +1,4 @@
-#version: "3.9"
+version: "3.9"
 
 services:
   ollama:
@@ -10,9 +10,12 @@ services:
       - ollama:/root/.ollama
     environment:
       - MODEL=${MODEL}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/v1/models"]
+      interval: 5s
+      retries: 12
     restart: unless-stopped
 
-  # Bootstrap Ollama models (runs once)
   bootstrap_models:
     image: ollama/ollama:latest
     container_name: bootstrap_models
@@ -35,6 +38,10 @@ services:
       echo '✅ Model bootstrap complete';
       "
     restart: "no"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ollama:11434/v1/models | grep -E 'phi3|mistral|codellama|nomic-embed-text'"]
+      interval: 10s
+      retries: 12
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
@@ -44,9 +51,14 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
-      - bootstrap_models
+      bootstrap_models:
+        condition: service_healthy
     volumes:
       - openwebui:/app/backend/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 5s
+      retries: 12
     restart: unless-stopped
 
   flowise:
@@ -57,9 +69,14 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
-      - bootstrap_models
+      bootstrap_models:
+        condition: service_healthy
     volumes:
       - flowise:/root/.flowise
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 5s
+      retries: 12
     restart: unless-stopped
 
   qdrant:
@@ -69,6 +86,10 @@ services:
       - "6333:6333"
     volumes:
       - qdrant:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      interval: 5s
+      retries: 12
     restart: unless-stopped
 
   n8n:
