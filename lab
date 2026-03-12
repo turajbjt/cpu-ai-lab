@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+COMMAND=$1
+
+function remove_old_ollama() {
+    if docker ps -a --format '{{.Names}}' | grep -q "^ollama$"; then
+        echo "⚠️  Removing existing Ollama container..."
+        docker stop ollama >/dev/null 2>&1 || true
+        docker rm ollama >/dev/null 2>&1 || true
+        echo "✔ Old Ollama container removed."
+    fi
+}
+
+function start_lab() {
+    remove_old_ollama
+    echo "🟢 Starting CPU AI Lab..."
+    docker compose up --build -d
+    echo "✅ CPU AI Lab is ready!"
+}
+
+function stop_lab() {
+    docker compose down
+}
+
+case "$COMMAND" in
+    up) start_lab ;;
+    down) stop_lab ;;
+    *) echo "Usage: $0 {up|down}" ; exit 1 ;;
+esac

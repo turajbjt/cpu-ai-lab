@@ -1,0 +1,10 @@
+# Docker volumes
+ollama/
+openwebui/
+flowise/
+qdrant/
+n8n/
+
+# Local Python/cache files
+__pycache__/
+*.pyc
