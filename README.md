@@ -131,7 +131,7 @@ This will:
 
 Once reset is complete, you can start the lab as usual:
 
-``bash
+```bash
 ./lab up
 ```
 
