@@ -1,5 +1,14 @@
-i#!/bin/bash
+#!/bin/bash
 # ./lab - CPU AI Lab robust startup script
+
+# allow docker-style command usage
+if [[ "$1" == "up" ]]; then
+  shift
+fi
+
+# CLI flags
+NO_LOGS=false
+FAST_START=false
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -93,7 +102,7 @@ docker pull n8nio/n8n
 
 # --- Start containers ---
 echo -e "${BLUE}🟢 Starting CPU AI Lab containers...${NC}"
-docker-compose up -d --build
+docker compose up -d --build
 
 # --- Optionally stream logs ---
 if [ "$NO_LOGS" = false ]; then
