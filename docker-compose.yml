@@ -11,7 +11,7 @@ services:
     environment:
       - MODEL=${MODEL}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/v1/models"]
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
       interval: 5s
       retries: 12
     restart: unless-stopped
@@ -21,27 +21,23 @@ services:
     container_name: bootstrap_models
     depends_on:
       - ollama
+    volumes:
+      - ollama:/root/.ollama
     entrypoint: >
       /bin/sh -c "
       echo '⬇ Bootstrapping Ollama models...';
-      until curl -s http://ollama:11434/api/tags >/dev/null; do
-        sleep 2;
-      done;
-      for model in phi3 mistral codellama nomic-embed-text; do
-        if curl -s http://ollama:11434/api/tags | grep -q \$model; then
-          echo '✔ \$model already installed';
-        else
-          echo '⬇ Pulling \$model';
-          ollama pull \$model;
-        fi;
-      done;
+      sleep 10;
+      ollama pull phi3;
+      ollama pull mistral;
+      ollama pull codellama;
+      ollama pull nomic-embed-text;
       echo '✅ Model bootstrap complete';
       "
     restart: "no"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://ollama:11434/v1/models | grep -E 'phi3|mistral|codellama|nomic-embed-text'"]
-      interval: 10s
-      retries: 12
+      test: ["CMD-SHELL", "ollama list phi3 >/dev/null 2>&1 && ollama list mistral >/dev/null 2>&1"]
+      interval: 5s
+      retries: 6
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
@@ -55,10 +51,6 @@ services:
         condition: service_healthy
     volumes:
       - openwebui:/app/backend/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 5s
-      retries: 12
     restart: unless-stopped
 
   flowise:
@@ -73,10 +65,6 @@ services:
         condition: service_healthy
     volumes:
       - flowise:/root/.flowise
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
-      interval: 5s
-      retries: 12
     restart: unless-stopped
 
   qdrant:
