@@ -29,6 +29,19 @@ if [ "$1" == "reset" ]; then
   docker volume rm ollama >/dev/null 2>&1 || true
   echo "✔ Ollama volume wiped."
 
+  # 1️⃣ Stop and remove all CPU AI Lab containers
+  docker ps -a --filter "name=cpu-ai-lab" --format "{{.Names}}" | xargs -r docker rm -f
+  docker ps -a --filter "name=ollama" --format "{{.Names}}" | xargs -r docker rm -f
+  docker ps -a --filter "name=multi_agent_webui" --format "{{.Names}}" | xargs -r docker rm -f
+  docker ps -a --filter "name=n8n" --format "{{.Names}}" | xargs -r docker rm -f
+  docker ps -a --filter "name=qdrant" --format "{{.Names}}" | xargs -r docker rm -f
+
+  # 2️⃣ Remove all CPU AI Lab volumes
+  docker volume ls --filter "name=cpu-ai-lab" --format "{{.Name}}" | xargs -r docker volume rm
+
+  # 3️⃣ Remove the default network created by CPU AI Lab
+  docker network ls --filter "name=cpu-ai-lab_default" --format "{{.Name}}" | xargs -r docker network rm
+
   # Reinitialize local learning data safely
   mkdir -p learning
   echo "[]" > learning/lessons.json
@@ -46,6 +59,8 @@ EXISTING=$(docker ps -a --filter "name=^${OLLLAMA_CONTAINER_NAME}$" --format '{{
 if [ -n "$EXISTING" ]; then
   echo "⚠️ Detected existing/conflicting Ollama container: $EXISTING"
   docker rm -f $OLLLAMA_CONTAINER_NAME >/dev/null
+  docker stop ollama
+  docker rm ollama
   echo "✔ Removed stale/conflicting Ollama container."
 fi
 
