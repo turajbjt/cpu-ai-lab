@@ -1,116 +1,141 @@
 #!/bin/bash
-set -e
+# ./lab - CPU AI Lab release-ready startup script
 
-# ✅ Configuration
-OLLLAMA_CONTAINER_NAME="ollama"
-OLLLAMA_PORT=11434
-MODELS=(
-  "phi3:latest"
-  "mistral:latest"
-  "codellama:latest"
-  "nomic-embed-text:latest"
-)
+# --- Color codes ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Check for "reset" argument
-if [ "$1" == "reset" ]; then
-  echo "🧹 Enhanced reset: wiping CPU AI Lab setup..."
+echo -e "${BLUE}🟢 Preparing CPU AI Lab environment...${NC}"
 
-  # Stop and remove all containers in the compose project
-  docker compose down -v --remove-orphans >/dev/null 2>&1
+# --- CLI flags ---
+NO_LOGS=false
+FAST_START=false
 
-  # Remove the Ollama container if it exists
-  if docker ps -a --format '{{.Names}}' | grep -q "^${OLLLAMA_CONTAINER_NAME}$"; then
-    echo "⚠️ Removing existing Ollama container..."
-    docker rm -f $OLLLAMA_CONTAINER_NAME >/dev/null 2>&1
-    echo "✔ Ollama container removed."
-  fi
-
-  # Remove Ollama volume completely
-  docker volume rm ollama >/dev/null 2>&1 || true
-  echo "✔ Ollama volume wiped."
-
-  # 1️⃣ Stop and remove all CPU AI Lab containers
-  docker ps -a --filter "name=cpu-ai-lab" --format "{{.Names}}" | xargs -r docker rm -f
-  docker ps -a --filter "name=ollama" --format "{{.Names}}" | xargs -r docker rm -f
-  docker ps -a --filter "name=multi_agent_webui" --format "{{.Names}}" | xargs -r docker rm -f
-  docker ps -a --filter "name=n8n" --format "{{.Names}}" | xargs -r docker rm -f
-  docker ps -a --filter "name=qdrant" --format "{{.Names}}" | xargs -r docker rm -f
-
-  # 2️⃣ Remove all CPU AI Lab volumes
-  docker volume ls --filter "name=cpu-ai-lab" --format "{{.Name}}" | xargs -r docker volume rm
-
-  # 3️⃣ Remove the default network created by CPU AI Lab
-  docker network ls --filter "name=cpu-ai-lab_default" --format "{{.Name}}" | xargs -r docker network rm
-
-  # Reinitialize local learning data safely
-  mkdir -p learning
-  echo "[]" > learning/lessons.json
-  echo "✔ Local learning data reinitialized."
-
-  echo "✅ Enhanced reset complete!"
-  echo "You can now run './lab up' to start fresh with new containers and models."
-  exit 0
-fi
-
-echo "🟢 Starting CPU AI Lab..."
-
-# 1️⃣ Detect and remove stale/conflicting Ollama container
-EXISTING=$(docker ps -a --filter "name=^${OLLLAMA_CONTAINER_NAME}$" --format '{{.Names}}' || true)
-if [ -n "$EXISTING" ]; then
-  echo "⚠️ Detected existing/conflicting Ollama container: $EXISTING"
-  docker rm -f $OLLLAMA_CONTAINER_NAME >/dev/null
-  docker stop ollama
-  docker rm ollama
-  echo "✔ Removed stale/conflicting Ollama container."
-fi
-
-# 2️⃣ Start Ollama container
-echo "🟢 Starting Ollama container..."
-docker run -d \
-  --name $OLLLAMA_CONTAINER_NAME \
-  -p $OLLLAMA_PORT:11434 \
-  -v ollama:/root/.ollama \
-  ollama/ollama:latest >/dev/null
-
-# 3️⃣ Wait for Ollama server to be ready
-echo "⏳ Waiting for Ollama server..."
-until curl -s http://localhost:${OLLLAMA_PORT}/api/tags | grep -q "models"; do
-  sleep 2
-done
-echo "✅ Ollama server is ready."
-
-# 4️⃣ Pull CPU-friendly models (skip if already installed)
-echo "⬇ Ensuring Ollama CPU models are installed..."
-for MODEL in "${MODELS[@]}"; do
-  INSTALLED=$(docker exec $OLLLAMA_CONTAINER_NAME ollama list | grep -w "${MODEL%%:*}" || true)
-  if [ -n "$INSTALLED" ]; then
-    echo "✔ $MODEL already installed, skipping..."
-  else
-    echo "Pulling $MODEL..."
-    docker exec $OLLLAMA_CONTAINER_NAME ollama pull $MODEL || {
-      echo "❌ Failed to pull $MODEL, skipping..."
-    }
-  fi
+for arg in "$@"; do
+    case $arg in
+        --no-logs) NO_LOGS=true ;;
+        --fast-start) FAST_START=true ;;
+        *) echo -e "${YELLOW}⚠️ Unknown option: $arg${NC}" ;;
+    esac
 done
 
-# 5️⃣ Ensure volumes exist and reinitialize learning data
-mkdir -p learning
-echo "[]" > learning/lessons.json
+# --- Utility functions ---
+safe_remove_container() {
+    local name="$1"
+    if docker ps -a --format '{{.Names}}' | grep -q "^${name}$"; then
+        echo -e "${YELLOW}🛠 Removing existing container: $name${NC}"
+        docker rm -f "$name"
+    else
+        echo -e "${GREEN}✅ No existing container named $name${NC}"
+    fi
+}
 
-# 6️⃣ Build and start all Docker Compose services
-echo "🚀 Building and starting Docker containers..."
-docker compose up --build -d >/dev/null
+safe_remove_volume() {
+    local name="$1"
+    if docker volume ls --format '{{.Name}}' | grep -q "^${name}$"; then
+        echo -e "${YELLOW}🛠 Removing existing volume: $name${NC}"
+        docker volume rm "$name"
+    else
+        echo -e "${GREEN}✅ No existing volume named $name${NC}"
+    fi
+}
 
-# 7️⃣ Finished
-echo ""
-echo "✅ CPU AI Lab is ready!"
-echo ""
-echo "Access URLs:"
-echo "Multi-agent API   -> http://localhost:5000/api/goal"
-echo "Web UI interface  -> http://localhost:3005"
-echo "Ollama API        -> http://localhost:${OLLLAMA_PORT}"
-echo "Qdrant Dashboard  -> http://localhost:6333/dashboard"
-echo "Open WebUI        -> http://localhost:3000"
-echo "Flowise           -> http://localhost:3001"
-echo "n8n               -> http://localhost:5678"
+safe_remove_network() {
+    local name="$1"
+    if docker network ls --format '{{.Name}}' | grep -q "^${name}$"; then
+        echo -e "${YELLOW}🛠 Removing existing network: $name${NC}"
+        docker network rm "$name"
+    else
+        echo -e "${GREEN}✅ No existing network named $name${NC}"
+    fi
+}
 
+stream_container_logs() {
+    local name="$1"
+    echo -e "${BLUE}📖 Streaming logs for $name...${NC}"
+    docker logs -f "$name" 2>&1 | sed "s/^/[$name] /"
+}
+
+wait_for_http() {
+    local name="$1"
+    local url="$2"
+    echo -e "${BLUE}⏳ Waiting for $name to respond at $url...${NC}"
+    until curl -s -o /dev/null "$url"; do
+        sleep 2
+    done
+    echo -e "${GREEN}✅ $name is responding!${NC}"
+}
+
+wait_for_ollama() {
+    local host="localhost"
+    local port="11434"
+    echo -e "${BLUE}⏳ Waiting for Ollama model server on $host:$port...${NC}"
+    until curl -s "http://$host:$port/v1/models" >/dev/null 2>&1; do
+        sleep 2
+    done
+    echo -e "${GREEN}✅ Ollama model server is ready!${NC}"
+}
+
+wait_for_qdrant() {
+    local host="localhost"
+    local port="6333"
+    echo -e "${BLUE}⏳ Waiting for Qdrant on $host:$port...${NC}"
+    until curl -s "http://$host:$port/collections" >/dev/null 2>&1; do
+        sleep 2
+    done
+    echo -e "${GREEN}✅ Qdrant is ready!${NC}"
+}
+
+# --- Cleanup previous resources ---
+echo -e "${BLUE}🔄 Cleaning previous containers, volumes, and network...${NC}"
+safe_remove_container "ollama"
+safe_remove_container "multi_agent_webui"
+safe_remove_container "n8n"
+safe_remove_container "qdrant"
+safe_remove_container "openwebui"
+
+safe_remove_volume "cpu-ai-lab_ollama"
+safe_remove_volume "cpu-ai-lab_n8n"
+safe_remove_volume "cpu-ai-lab_qdrant"
+safe_remove_volume "cpu-ai-lab_flowise"
+safe_remove_volume "cpu-ai-lab_openwebui"
+
+safe_remove_network "cpu-ai-lab_default"
+
+# --- Pull/build Docker images ---
+echo -e "${BLUE}📦 Pulling/building Docker images...${NC}"
+docker pull flowiseai/flowise:latest
+docker build -t cpu-ai-lab-agents ./agents
+docker build -t cpu-ai-lab-webui ./webui
+
+# --- Start containers ---
+echo -e "${BLUE}🟢 Starting CPU AI Lab containers...${NC}"
+docker-compose up -d --build
+
+# --- Optionally stream logs ---
+if [ "$NO_LOGS" = false ]; then
+    containers=("ollama" "multi_agent_webui" "n8n" "qdrant" "openwebui")
+    for c in "${containers[@]}"; do
+        stream_container_logs "$c" &
+    done
+fi
+
+# --- Health checks ---
+if [ "$FAST_START" = false ]; then
+    wait_for_http "OpenWebUI" "http://localhost:5000"
+    wait_for_http "Flowise" "http://localhost:3000"
+    wait_for_http "N8N" "http://localhost:5678"
+    wait_for_ollama
+    wait_for_qdrant
+    echo -e "${GREEN}🎉 CPU AI Lab is fully ready! All services are running and responsive.${NC}"
+else
+    echo -e "${YELLOW}⚡ Fast start enabled, skipping health checks. Containers are running.${NC}"
+fi
+
+# --- Wait for background logs if any ---
+if [ "$NO_LOGS" = false ]; then
+    wait
+fi
