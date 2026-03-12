@@ -1,30 +1,101 @@
 #!/bin/bash
 set -e
 
-COMMAND=$1
+# ✅ Configuration
+OLLLAMA_CONTAINER_NAME="ollama"
+OLLLAMA_PORT=11434
+MODELS=(
+  "phi3:latest"
+  "mistral:latest"
+  "codellama:latest"
+  "nomic-embed-text:latest"
+)
 
-function remove_old_ollama() {
-    if docker ps -a --format '{{.Names}}' | grep -q "^ollama$"; then
-        echo "⚠️  Removing existing Ollama container..."
-        docker stop ollama >/dev/null 2>&1 || true
-        docker rm ollama >/dev/null 2>&1 || true
-        echo "✔ Old Ollama container removed."
-    fi
-}
+# Check for "reset" argument
+if [ "$1" == "reset" ]; then
+  echo "🧹 Enhanced reset: wiping CPU AI Lab setup..."
 
-function start_lab() {
-    remove_old_ollama
-    echo "🟢 Starting CPU AI Lab..."
-    docker compose up --build -d
-    echo "✅ CPU AI Lab is ready!"
-}
+  # Stop and remove all containers in the compose project
+  docker compose down -v --remove-orphans >/dev/null 2>&1
 
-function stop_lab() {
-    docker compose down
-}
+  # Remove the Ollama container if it exists
+  if docker ps -a --format '{{.Names}}' | grep -q "^${OLLLAMA_CONTAINER_NAME}$"; then
+    echo "⚠️ Removing existing Ollama container..."
+    docker rm -f $OLLLAMA_CONTAINER_NAME >/dev/null 2>&1
+    echo "✔ Ollama container removed."
+  fi
 
-case "$COMMAND" in
-    up) start_lab ;;
-    down) stop_lab ;;
-    *) echo "Usage: $0 {up|down}" ; exit 1 ;;
-esac
+  # Remove Ollama volume completely
+  docker volume rm ollama >/dev/null 2>&1 || true
+  echo "✔ Ollama volume wiped."
+
+  # Reinitialize local learning data safely
+  mkdir -p learning
+  echo "[]" > learning/lessons.json
+  echo "✔ Local learning data reinitialized."
+
+  echo "✅ Enhanced reset complete!"
+  echo "You can now run './lab up' to start fresh with new containers and models."
+  exit 0
+fi
+
+echo "🟢 Starting CPU AI Lab..."
+
+# 1️⃣ Detect and remove stale/conflicting Ollama container
+EXISTING=$(docker ps -a --filter "name=^${OLLLAMA_CONTAINER_NAME}$" --format '{{.Names}}' || true)
+if [ -n "$EXISTING" ]; then
+  echo "⚠️ Detected existing/conflicting Ollama container: $EXISTING"
+  docker rm -f $OLLLAMA_CONTAINER_NAME >/dev/null
+  echo "✔ Removed stale/conflicting Ollama container."
+fi
+
+# 2️⃣ Start Ollama container
+echo "🟢 Starting Ollama container..."
+docker run -d \
+  --name $OLLLAMA_CONTAINER_NAME \
+  -p $OLLLAMA_PORT:11434 \
+  -v ollama:/root/.ollama \
+  ollama/ollama:latest >/dev/null
+
+# 3️⃣ Wait for Ollama server to be ready
+echo "⏳ Waiting for Ollama server..."
+until curl -s http://localhost:${OLLLAMA_PORT}/api/tags | grep -q "models"; do
+  sleep 2
+done
+echo "✅ Ollama server is ready."
+
+# 4️⃣ Pull CPU-friendly models (skip if already installed)
+echo "⬇ Ensuring Ollama CPU models are installed..."
+for MODEL in "${MODELS[@]}"; do
+  INSTALLED=$(docker exec $OLLLAMA_CONTAINER_NAME ollama list | grep -w "${MODEL%%:*}" || true)
+  if [ -n "$INSTALLED" ]; then
+    echo "✔ $MODEL already installed, skipping..."
+  else
+    echo "Pulling $MODEL..."
+    docker exec $OLLLAMA_CONTAINER_NAME ollama pull $MODEL || {
+      echo "❌ Failed to pull $MODEL, skipping..."
+    }
+  fi
+done
+
+# 5️⃣ Ensure volumes exist and reinitialize learning data
+mkdir -p learning
+echo "[]" > learning/lessons.json
+
+# 6️⃣ Build and start all Docker Compose services
+echo "🚀 Building and starting Docker containers..."
+docker compose up --build -d >/dev/null
+
+# 7️⃣ Finished
+echo ""
+echo "✅ CPU AI Lab is ready!"
+echo ""
+echo "Access URLs:"
+echo "Multi-agent API   -> http://localhost:5000/api/goal"
+echo "Web UI interface  -> http://localhost:3005"
+echo "Ollama API        -> http://localhost:${OLLLAMA_PORT}"
+echo "Qdrant Dashboard  -> http://localhost:6333/dashboard"
+echo "Open WebUI        -> http://localhost:3000"
+echo "Flowise           -> http://localhost:3001"
+echo "n8n               -> http://localhost:5678"
+
