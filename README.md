@@ -74,6 +74,7 @@ Stop the lab:
 * Automatic Ollama model bootstrap
 * Persistent volumes for all services
 * Conflict-free startup (old Ollama containers are removed automatically)
+* Auto-removal of stale/conflicting Ollama containers
 
 
 ## 💾 Volumes & Persistence
