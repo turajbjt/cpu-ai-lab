@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "===================================="
+echo "Enhanced CPU AI Lab Startup Script"
+echo "===================================="
+
+# ⚡ Usage Examples
+#
+# Start all services:
+#
+#   ./lab_up
+#
+# Start only WebUI and Flowise:
+#
+#   ./lab_up --webui --flowise
+#
+# Pause the lab:
+#
+#   ./lab_up --pause
+#
+# Start fresh with deep clean:
+#
+#   ./lab_up --clean
+#
+# View running containers:
+#
+#   docker ps
+
+# -------------------------------
+# Step 0: Parse optional flags
+# -------------------------------
+
+SERVICES=""
+
+while [[ "$#" -gt 0 ]]; do
+case $1 in
+--webui) SERVICES="$SERVICES webui" ;;
+--flowise) SERVICES="$SERVICES flowise" ;;
+--litellm) SERVICES="$SERVICES litellm" ;;
+--clean) CLEAN=true ;;
+--pause) PAUSE=true ;;
+*) echo "Unknown option: $1"; exit 1 ;;
+esac
+shift
+done
+
+# -------------------------------
+# Step 1: Optional deep clean
+# -------------------------------
+
+if [[ $CLEAN == true ]]; then
+echo "Pruning unused containers, networks, volumes..."
+docker system prune -af
+fi
+
+# -------------------------------
+# Step 2: Stop lingering scripts
+# -------------------------------
+
+echo "Stopping any leftover lab scripts..."
+pkill -f lab_up || true
+pkill -f docker-compose || true
+
+# -------------------------------
+# Step 3: Pause mode
+# -------------------------------
+
+if [[ $PAUSE == true ]]; then
+echo "Pausing all running lab containers..."
+docker pause $(docker ps -q) || true
+echo "Lab paused. Use ./lab_up --resume to continue."
+exit 0
+fi
+
+# -------------------------------
+# Step 4: Stop any running containers
+# -------------------------------
+
+echo "Stopping running containers..."
+docker compose down --remove-orphans || true
+
+# -------------------------------
+# Step 5: Disable restart policies temporarily
+# -------------------------------
+
+echo "Disabling restart policies for safety..."
+for c in $(docker ps -aq); do
+docker update --restart=no $c >/dev/null 2>&1 || true
+done
+
+# -------------------------------
+# Step 6: Start services
+# -------------------------------
+
+if [[ -z "$SERVICES" ]]; then
+echo "Starting all services in detached mode..."
+docker compose up -d --wait
+else
+echo "Starting selected services: $SERVICES"
+docker compose up -d --wait $SERVICES
+fi
+
+# -------------------------------
+# Step 7: Restore restart policies
+# -------------------------------
+
+echo "Setting restart policies to 'unless-stopped'..."
+for c in $(docker ps -q); do
+docker update --restart=unless-stopped $c >/dev/null 2>&1 || true
+done
+
+# -------------------------------
+# Step 8: Status report
+# -------------------------------
+
+echo "===================================="
+echo "CPU AI Lab startup complete. Running containers:"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+echo "===================================="
+
+# -------------------------------
+# Step 9: Optional logs follow
+# -------------------------------
+
+echo "Tip: view logs with 'docker compose logs -f'"
+echo "Or check specific container logs with 'docker logs <container_name>'"
+
