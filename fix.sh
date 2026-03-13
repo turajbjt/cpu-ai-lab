@@ -33,8 +33,9 @@ echo " "
 echo "⚠️ Warning: This deletes all unused containers, networks, images, and volumes on your system, not just lab-related ones."
 
 echo " "
-echo "4️⃣ Retry the lab"
-./lab up
+echo "4️⃣ Retry the lab:"
+echo "$ ./lab up"
 
+echo " "
 echo "=> It should now start fresh without detecting the conflicting container."
 echo " "

@@ -1,0 +1,15 @@
+#!/bin/bash
+# ./lab down
+
+echo "🛑 Stopping and removing CPU AI Lab containers, network, and volumes..."
+
+# Remove all lab containers (ignore errors if not found)
+docker rm -f ollama bootstrap_models openwebui flowise qdrant n8n multi_agent_webui 2>/dev/null
+
+# Remove the default lab network
+docker network rm cpu-ai-lab_default 2>/dev/null
+
+# Remove volumes (optional, uncomment if you want a full reset)
+# docker volume rm ollama openwebui flowise qdrant n8n 2>/dev/null
+
+echo "✅ Lab has been stopped and cleaned."

@@ -26,18 +26,24 @@ services:
     entrypoint: >
       /bin/sh -c "
       echo '⬇ Bootstrapping Ollama models...';
-      sleep 10;
-      ollama pull phi3;
-      ollama pull mistral;
-      ollama pull codellama;
-      ollama pull nomic-embed-text;
+      sleep 15;
+      for model in phi3 mistral codellama nomic-embed-text; do
+        if ollama list | grep -q \$model; then
+          echo '✔ \$model already installed';
+        else
+          echo '⬇ Pulling \$model';
+          ollama pull \$model;
+        fi;
+      done;
       echo '✅ Model bootstrap complete';
       "
     restart: "no"
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list phi3 >/dev/null 2>&1 && ollama list mistral >/dev/null 2>&1"]
-      interval: 5s
-      retries: 6
+
+## Temporarily remove healthchecks
+#  healthcheck:
+#    test: ["CMD-SHELL", "ollama list phi3 >/dev/null 2>&1 && ollama list mistral >/dev/null 2>&1"]
+#    interval: 5s
+#    retries: 6
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
