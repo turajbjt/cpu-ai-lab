@@ -16,7 +16,7 @@ For full AI reset, see [Reset](RESET.md)
 For troubleshooting, see [Troubleshooting](TROUBLESHOOTING.md)  
 For validating services, see [Health Check](HEALTHCHECK.md)  
 For CLI flag reference, see [Flags](FLAGS.md)  
-
+For What It Can Do, see [What It Can Do](WHAT_CAN_DO.md)
 
 ## 🚀 First-Run Setup (Quick Run)
 
