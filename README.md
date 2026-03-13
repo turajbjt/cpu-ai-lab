@@ -18,71 +18,137 @@ For validating services, see [Health Check](HEALTHCHECK.md)
 For CLI flag reference, see [Flags](FLAGS.md)  
 For What It Can Do, see [What It Can Do](WHAT_CAN_DO.md)
 
-## 🚀 First-Run Setup (Quick Run)
+
+## 🚀 Features
+
+* Run local LLMs using Ollama
+* Manage embeddings and vector storage with Qdrant
+* CPU-friendly setup; no GPU required
+* Web interface for experiments
+* Modular architecture with Docker for easy deployment
+
+
+## ⚙️ Requirements
+
+🛠  Prerequisites
+
+Make sure the following are installed:
+
+* Docker ≥ 24.x
+* Docker Compose ≥ 2.18.x
+* CPU supporting AVX instructions (required by some LLMs)
+* Optional: Python 3.11+ (if running scripts outside Docker)
+* Linux, macOS, or Windows with WSL2
+
+
+📂 Repository Structure
+
+``
+cpu-ai-lab/
+├─ docker-compose.yml       # Docker Compose setup
+├─ requirements.txt         # Python dependencies
+├─ .env.example             # Example environment variables
+├─ lab_up                   # Start all containers
+├─ lab_down                 # Stop all containers
+├─ QUICK_START.md           # Quick start guide
+├─ TROUBLESHOOTING.md       # Known issues & fixes
+└─ WHAT_CAN_DO.md           # Capabilities of the lab
+``
+
+## ⚡ First-Run Setup (Quick Run)
 
 # Super quick reset and start
 
-Clone the repository
+1. Clone the repository
 
 ```bash
 git clone https://github.com/turajbjt/cpu-ai-lab.git
 cd cpu-ai-lab
 ```
 
-Start CPU AI Lab (super quick one-liner)
+2. Copy environment variables
 
 ```bash
-./lab up --no-logs --fast-start && echo -e "\n✅ CPU AI Lab environment is up and running!"
+cp .env.example .env
 ```
 
-🔹 What this does:
+Edit .env if needed (ports, API keys, or memory limits).
 
-* Removes old containers, volumes, and network
-* Pulls/builds Docker images (Ollama, Flowise, OpenWebUI, Agents, Qdrant, N8N)
-* Starts all containers in the correct order
-* Skips logs and health checks for maximum speed
+3. Start Docker Containers
 
-**Notes:**
+```bash
+./lab up
+```
 
-* Containers are running in the background — services may not be fully ready until a few seconds after startup.
-* You can check logs later if needed:  ``docker logs -f ollama``
-* If you want full startup with health checks and logs, just run: ``./lab up``
+This will start:
 
+* LLM service (Ollama)
+* Vector database (Qdrant)
+* Web UI/API services
 
-## ✨ Features
+4. Access the lab
 
-* CPU-friendly Ollama models: phi3, mistral, codellama, nomic-embed-text
-* Multi-agent system for AI workflows
-* Web UI for interacting with agents
-* Flowise orchestration flows
-* Qdrant vector database for embeddings/search
-* n8n workflow automation
-* Automatic Ollama model bootstrap
-* Persistent volumes for all services
-* Conflict-free startup (old Ollama containers are removed automatically)
-* Auto-removal of stale/conflicting Ollama containers
+* Web interface: http://localhost:3000 (or port defined in .env)
+* Qdrant UI: http://localhost:6333
+
+5. Stop containers
+
+```bash
+./lab_down
+```
 
 
-## 💾 Volumes & Persistence
+# 📦 Dependencies
 
-| **Volume** | **Purpose** |
-| ---------- | ----------- |
-| ollama     | Ollama models and configs |
-| openwebui  | WebUI data |
-| flowise    | Flowise flows |
-| qdrant     | Qdrant vector storage |
-| n8n        | n8n workflows |
+``requirements.txt`` (pinned versions recommended):
 
+``bash
+langchain==0.3.1
+qdrant-client==1.2.2
+requests==2.31.0
+Flask==2.3.2
+```
 
-## ⚙️ Requirements
-
-* Docker ≥ 24
-* Docker Compose ≥ 2
-* Linux, macOS, or Windows with WSL2
+⚠  *Avoid latest tags for Docker images; pin to a stable version to prevent breaking changes.*
 
 
+# 🩺 Health Checks
 
-## 📄 License
+* Ollama: curl http://localhost:11434/v1/models
+* Qdrant: curl http://localhost:6333/collections
 
-This repo is provided under the MIT License.
+Docker containers include optional healthcheck entries to monitor availability.
+
+
+# 📝 Environment Variables
+
+Example ``.env`` variables:
+
+```bash
+WEB_PORT=3000
+QDRANT_PORT=6333
+OLLAMA_MODEL=llama2
+```
+
+
+# 🐞 Troubleshooting
+
+* CPU not supported: Some LLMs require AVX instructions → check lscpu | grep avx
+* Docker Compose fails: Ensure Docker ≥ 24.x and Compose ≥ 2.18.x
+* Port conflicts: Update .env with available ports
+
+Full troubleshooting: see TROUBLESHOOTING.md
+
+
+# 🌟 Recommended Improvements
+
+* Add GitHub Actions for CI/testing
+* Provide example datasets for experiments
+* Include screenshots of Web UI for clarity
+
+
+# 📜 License
+
+MIT License
+
 
