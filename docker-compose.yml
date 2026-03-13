@@ -1,89 +1,40 @@
-#version: "3.9"
-
 services:
-  ollama:
-    container_name: ollama
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama:/root/.ollama
-    environment:
-      - MODEL=${MODEL}
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
-      interval: 5s
-      retries: 12
-    restart: unless-stopped
-
-  bootstrap_models:
-    image: ollama/ollama:latest
-    container_name: bootstrap_models
-    depends_on:
-      - ollama
-    volumes:
-      - ollama:/root/.ollama
-    entrypoint: >
-      /bin/sh -c "
-      echo '⬇ Bootstrapping Ollama models...';
-      sleep 15;
-      for model in phi3 mistral codellama nomic-embed-text; do
-        if ollama list | grep -q \$model; then
-          echo '✔ \$model already installed';
-        else
-          echo '⬇ Pulling \$model';
-          ollama pull \$model;
-        fi;
-      done;
-      echo '✅ Model bootstrap complete';
-      "
-    restart: "no"
-
-## Temporarily remove healthchecks
-#  healthcheck:
-#    test: ["CMD-SHELL", "ollama list phi3 >/dev/null 2>&1 && ollama list mistral >/dev/null 2>&1"]
-#    interval: 5s
-#    retries: 6
-
-  openwebui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: openwebui
-    ports:
-      - "3000:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-    depends_on:
-      bootstrap_models:
-        condition: service_healthy
-    volumes:
-      - openwebui:/app/backend/data
-    restart: unless-stopped
-
-  flowise:
-    image: flowiseai/flowise
-    container_name: flowise
-    ports:
-      - "3001:3000"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-    depends_on:
-      bootstrap_models:
-        condition: service_healthy
-    volumes:
-      - flowise:/root/.flowise
-    restart: unless-stopped
-
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
     ports:
       - "6333:6333"
-    volumes:
-      - qdrant:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
-      interval: 5s
-      retries: 12
+      - "6334:6334"
+    restart: unless-stopped
+
+  bootstrap_models:
+    build: ./bootstrap_models
+    container_name: bootstrap_models
+    restart: unless-stopped
+
+  multi_agent_lab:
+    build: ./multi_agent_lab
+    container_name: multi_agent_lab
+    depends_on:
+      - bootstrap_models
+      - qdrant
+    restart: unless-stopped
+
+  multi_agent_webui:
+    build: ./multi_agent_webui
+    container_name: multi_agent_webui
+    ports:
+      - "3005:80"
+    depends_on:
+      - multi_agent_lab
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    command: /bin/ollama serve
+    ports:
+      - "11434:11434"
     restart: unless-stopped
 
   n8n:
@@ -91,13 +42,5 @@ services:
     container_name: n8n
     ports:
       - "5678:5678"
-    volumes:
-      - n8n:/home/node/.n8n
     restart: unless-stopped
 
-volumes:
-  ollama:
-  openwebui:
-  flowise:
-  qdrant:
-  n8n:

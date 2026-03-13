@@ -1,0 +1,12 @@
+# Example: FastAPI for WebUI
+fastapi>=0.99.0
+uvicorn[standard]>=0.23.0
+
+# Optional dependencies
+jinja2
+requests
+
+# Include any dependencies used by the WebUI
+# e.g., if it talks to Qdrant
+qdrant-client>=1.0.0
+

@@ -1,0 +1,13 @@
+# Core dependencies
+langchain>=0.1.0
+langchain_community>=0.0.20
+
+# Optional helpers
+requests
+numpy
+pydantic>=1.10
+
+# Add other packages your agents use
+# e.g., qdrant-client for Qdrant vector store
+qdrant-client>=1.0.0
+

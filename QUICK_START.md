@@ -40,6 +40,7 @@ Stop the lab:
 3️⃣ Fast start options
 
 | **Command** | **Description** |
+| ----------- | --------------- |
 | ./lab up --no-logs | Startup without real-time logs, but still runs health checks |
 | ./lab up --fast-start | Quick start, skips health checks, shows logs |
 | ./lab up --no-logs --fast-start | Fastest startup, no logs, no health checks |
@@ -65,7 +66,9 @@ Stop the lab:
 | ---------------- | ------- |
 | Open WebUI       | http://localhost:3000 |
 | Flowise          | http://localhost:3001 |
+| Browser UI       | http://localhost:3005 |
 | Ollama API       | http://localhost:11434 |
+| Multi-Agent API  | http://localhost:5000/api/goal |
 | Qdrant Dashboard | http://localhost:6333/dashboard |
 | n8n              | http://localhost:5678 |
 

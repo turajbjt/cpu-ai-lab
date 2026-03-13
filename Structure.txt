@@ -92,12 +92,12 @@ chmod +x start_lab.sh
     Access services:
 
 Service	URL
-Multi-Agent API	http://localhost:5000/api/goal
-Browser UI	http://localhost:3005
-Ollama API	http://localhost:11434
-Qdrant Dashboard	http://localhost:6333/dashboard
 Open WebUI	http://localhost:3000
 Flowise	http://localhost:3001
+Browser UI	http://localhost:3005
+Ollama API	http://localhost:11434
+Multi-Agent API	http://localhost:5000/api/goal
+Qdrant Dashboard	http://localhost:6333/dashboard
 n8n	http://localhost:5678
 
 🔹 GitLab Best Practices
