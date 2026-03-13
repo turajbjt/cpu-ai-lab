@@ -13,11 +13,9 @@ Typical uses:
 
 Because it runs locally:
 
-your data stays on your machine
-
-no API costs
-
-works offline
+* your data stays on your machine
+* no API costs
+* works offline
 
 This setup usually includes a UI like Open WebUI where you chat with models.
 
@@ -42,13 +40,7 @@ You can:
 
 Example workflow:
 
-User question
-   ↓
-Vector database search
-   ↓
-LLM response
-   ↓
-Send answer
+User question → Vector database search → LLM response → Send answer
 
 No heavy coding required.
 
@@ -162,23 +154,23 @@ Great for:
 
 *AI coding assistant*
 
-Local alternative to Copilot.
+→ Local alternative to Copilot.
 
 *Personal knowledge base*
 
-Ask questions about all your files.
+→ Ask questions about all your files.
 
 *AI agent*
 
-Automate tasks like:
+→ Automate tasks like:
 
 * scraping data
 * summarizing news
 * writing reports
 
-Local AI SaaS prototype
+*Local AI SaaS prototype*
 
-Build something like:
+→ Build something like:
 
 * ChatGPT clone
 * customer support bot
