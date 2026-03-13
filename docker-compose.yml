@@ -12,9 +12,9 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/v1/models"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
+      interval: 60s       # increased from 30s
+      timeout: 10s        # increased from 5s
+      retries: 10         # increased from 5
 
   qdrant:
     image: qdrant/qdrant:latest
