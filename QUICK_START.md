@@ -59,21 +59,12 @@ Stop the lab:
 
 5️⃣ Accessing services
 
-| **Service**   | **URL / Port**                                              |
-| --------- | ------------------------------------------------------- |
-| OpenWebUI | [http://localhost:5000](http://localhost:5000)          |
-| Flowise | [http://localhost:3000](http://localhost:3000)          |
-| N8N       | [http://localhost:5678](http://localhost:5678)          |
-| Ollama    | API on [http://localhost:11434](http://localhost:11434) |
-| Qdrant    | API on [http://localhost:6333](http://localhost:6333)   |
-
 ## 🌐 Access URLs
 
 | **Service**      | **URL** |
 | ---------------- | ------- |
 | Open WebUI       | http://localhost:3000 |
 | Flowise          | http://localhost:3001 |
-| Multi-agent API  | http://localhost:5000/api/goal |
 | Ollama API       | http://localhost:11434 |
 | Qdrant Dashboard | http://localhost:6333/dashboard |
 | n8n              | http://localhost:5678 |
